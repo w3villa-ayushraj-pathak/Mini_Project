@@ -72,23 +72,26 @@ function Login() {
     }
   };
 
-  const handleSocialAuth = async (providerType) => {
-    try {
-      // setLoading(true);
-      let provider;
-      
-      if (providerType === "google") {
-        provider = new GoogleAuthProvider();
-      } else if (providerType === "facebook") {
-        provider = new FacebookAuthProvider();
-      }
+  const handleSocialAuth = async (providerType, e) => {
+    if (e && typeof e.stopPropagation === "function") {
+      e.stopPropagation();
+      e.preventDefault();
+    }
 
+    let provider;
+    if (providerType === "google") {
+      provider = new GoogleAuthProvider();
+    } else if (providerType === "facebook") {
+      provider = new FacebookAuthProvider();
+    }
+
+    try {
       const result = await signInWithPopup(auth, provider);
       
+      setLoading(true);
+      
       const idToken = await result.user.getIdToken();
-      
       const backendResponse = await socialLoginAPI(idToken);
-      
       await handleAuthFinalization(backendResponse.data.token, backendResponse.message);
     } catch (error) {
       console.error(error);
@@ -124,7 +127,7 @@ function Login() {
           <button
             type="button"
             disabled={loading}
-            onClick={() => handleSocialAuth("google")}
+            onClick={(e) => handleSocialAuth("google",e)}
             className="flex items-center justify-center gap-x-2 bg-zinc-900/50 hover:bg-zinc-900 border border-zinc-800 disabled:opacity-50 text-zinc-200 text-sm font-semibold py-3 px-4 rounded-xl transition-all cursor-pointer active:scale-[0.98]"
           >
             <FaGoogle className="text-red-400 text-base" />
@@ -133,7 +136,7 @@ function Login() {
           <button
             type="button"
             disabled={loading}
-            onClick={() => handleSocialAuth("facebook")}
+            onClick={(e) => handleSocialAuth("facebook",e)}
             className="flex items-center justify-center gap-x-2 bg-zinc-900/50 hover:bg-zinc-900 border border-zinc-800 disabled:opacity-50 text-zinc-200 text-sm font-semibold py-3 px-4 rounded-xl transition-all cursor-pointer active:scale-[0.98]"
           >
             <FaFacebookF className="text-blue-500 text-base" />
