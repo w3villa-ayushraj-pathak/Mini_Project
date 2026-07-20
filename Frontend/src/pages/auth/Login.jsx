@@ -216,7 +216,7 @@ function Login() {
         >
           Don't have an account?{" "}
           <Link to="/register" className="text-emerald-400 hover:text-emerald-300 font-semibold transition-colors">
-            Sign Up
+            register
           </Link>
         </motion.p>
       </div>
