@@ -74,7 +74,7 @@ function Login() {
 
   const handleSocialAuth = async (providerType) => {
     try {
-      setLoading(true);
+      // setLoading(true);
       let provider;
       
       if (providerType === "google") {
