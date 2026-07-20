@@ -233,7 +233,7 @@ const socialLogin = catchAsync(async (req, res, next) => {
     return next(new AppError("Firebase Identity ID Token is required", 400));
   }
 
-  const decodedToken = await admin.auth().verifyIdToken(idToken);
+  const decodedToken = await admin.auth.verifyIdToken(idToken);
   const { email, name, picture, uid, firebase } = decodedToken;
 
   if (!email) {

@@ -1,26 +1,41 @@
 const { initializeApp, cert, getApps, getApp } = require("firebase-admin/app");
 const { getAuth } = require("firebase-admin/auth"); 
-const path = require("path");
 
-let adminApp;
+let adminApp = null;
+let initializedSuccessfully = false;
 
 try {
-  const serviceAccountPath = path.resolve(__dirname, "../../firebase.json");
-  const serviceAccount = require(serviceAccountPath);
-
   if (getApps().length === 0) {
+    const base64Config = process.env.FIREBASE_SERVICE_ACCOUNT_B64;
+
+    if (!base64Config) {
+      throw new Error("FIREBASE_SERVICE_ACCOUNT_B64 variable is missing from your configuration!");
+    }
+
+    
+    const decodedJsonString = Buffer.from(base64Config, "base64").toString("utf8");
+    const serviceAccountObject = JSON.parse(decodedJsonString);
+
     adminApp = initializeApp({
-      credential: cert(serviceAccount)
+      credential: cert(serviceAccountObject) 
     });
-    console.log("Firebase Admin SDK initialized successfully");
+    
+    initializedSuccessfully = true;
+    console.log("Firebase Admin SDK initialized successfully ");
   } else {
     adminApp = getApp();
+    initializedSuccessfully = true;
   }
 } catch (error) {
-  console.error("Error initializing Firebase Admin:", error.message);
+  console.error("Critical Error initializing Firebase Admin:", error.message);
 }
 
 module.exports = {
   app: adminApp,
-  auth: () => getAuth(adminApp) 
+  get auth() {
+    if (!initializedSuccessfully || !adminApp) {
+      throw new Error("Cannot access Firebase Auth because the Admin SDK failed to boot.");
+    }
+    return getAuth(adminApp);
+  }
 };
