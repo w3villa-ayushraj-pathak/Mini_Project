@@ -40,7 +40,7 @@ function Navbar() {
       <div className="flex items-center justify-between h-16 max-w-7xl mx-auto">
         
         <div 
-          onClick={() => navigate("/dashboard")} 
+          onClick={() =>(user.role=='admin')?navigate("/admin/dashboard"):navigate("/dashboard")} 
           className="flex items-center gap-x-2.5 cursor-pointer group shrink-0"
         >
           <div className="h-8 w-8 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/10">

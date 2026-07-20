@@ -330,7 +330,7 @@ function Profile() {
                   <label className="text-zinc-400 text-xs font-semibold tracking-wider uppercase pl-1">Phone String</label>
                   <div className="relative flex items-center group">
                     <FontAwesomeIcon icon={faPhone} className="absolute left-4 text-zinc-500 text-sm group-focus-within:text-emerald-400 transition-colors" />
-                    <input type="text" name="phone" value={formData.phone} onChange={handleChange} placeholder="0123456789" className="w-full outline-none bg-zinc-900/30 border border-zinc-800/80 text-zinc-100 pl-11 pr-4 py-2.5 sm:py-3 rounded-xl text-sm transition-all focus:border-emerald-500 focus:bg-zinc-900/60" />
+                    <input type="number" name="phone" value={formData.phone} onChange={handleChange} placeholder="0123456789" className="w-full outline-none bg-zinc-900/30 border border-zinc-800/80 text-zinc-100 pl-11 pr-4 py-2.5 sm:py-3 rounded-xl text-sm transition-all focus:border-emerald-500 focus:bg-zinc-900/60" />
                   </div>
                 </div>
               </div>
