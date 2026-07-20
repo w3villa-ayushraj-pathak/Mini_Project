@@ -2,7 +2,7 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
     "dev": "npx nodemon server.js",
     "build": "npx nodemon server.js",
@@ -36,5 +36,8 @@
     "razorpay": "^2.9.6",
     "routes": "^2.1.0",
     "stack": "^0.1.0"
+  },
+  "overrides": {
+    "jose": "^4.15.5"
   }
 }
