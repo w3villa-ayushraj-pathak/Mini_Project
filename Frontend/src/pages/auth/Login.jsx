@@ -215,7 +215,7 @@ function Login() {
           className="text-center text-xs sm:text-sm text-zinc-500 mt-6"
         >
           Don't have an account?{" "}
-          <Link to="/signup" className="text-emerald-400 hover:text-emerald-300 font-semibold transition-colors">
+          <Link to="/register" className="text-emerald-400 hover:text-emerald-300 font-semibold transition-colors">
             Sign Up
           </Link>
         </motion.p>
