@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { HiEye, HiEyeOff, HiOutlineMail, HiOutlineLockClosed } from "react-icons/hi";
 import { FaGoogle, FaFacebookF } from "react-icons/fa"; 
@@ -6,15 +6,22 @@ import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import { useDispatch } from "react-redux";
 
-import { initializeApp } from "firebase/app";
-import { getAuth, signInWithPopup, GoogleAuthProvider, FacebookAuthProvider } from "firebase/auth";
+import { initializeApp, getApps, getApp } from "firebase/app";
+import {
+  getAuth,
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
+  GoogleAuthProvider,
+  FacebookAuthProvider
+} from "firebase/auth";
 
 import { loginSuccess } from "../../redux/slices/authSlice";
 import { loginUser, getProfile, socialLoginAPI } from "../../services/auth.service"; 
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "mini-770f9.firebaseapp.com",
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
@@ -22,7 +29,7 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-const app = initializeApp(firebaseConfig);
+const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
 function Login() {
@@ -59,6 +66,33 @@ function Login() {
     }
   };
 
+  // Handle redirect login when returning from social auth redirect
+  useEffect(() => {
+    let isMounted = true;
+    const checkRedirectResult = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result && isMounted) {
+          setLoading(true);
+          const idToken = await result.user.getIdToken();
+          const backendResponse = await socialLoginAPI(idToken);
+          await handleAuthFinalization(backendResponse.data.token, backendResponse.message);
+        }
+      } catch (error) {
+        console.error("Redirect sign-in error:", error);
+        toast.error(error.response?.data?.message || error.message || "Social login failed");
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    checkRedirectResult();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -81,21 +115,35 @@ function Login() {
     let provider;
     if (providerType === "google") {
       provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: "select_account" });
     } else if (providerType === "facebook") {
       provider = new FacebookAuthProvider();
     }
 
     try {
-      const result = await signInWithPopup(auth, provider);
-      
       setLoading(true);
-      
+      const result = await signInWithPopup(auth, provider);
       const idToken = await result.user.getIdToken();
       const backendResponse = await socialLoginAPI(idToken);
       await handleAuthFinalization(backendResponse.data.token, backendResponse.message);
     } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.message || `${providerType} Authentication Failed`);
+      console.error(`${providerType} auth error:`, error);
+      if (error.code === "auth/popup-blocked") {
+        toast.loading("Pop-up blocked by browser. Redirecting to login...", { id: "social-redirect", duration: 3000 });
+        try {
+          await signInWithRedirect(auth, provider);
+          return;
+        } catch (redirectError) {
+          console.error("Redirect fallback error:", redirectError);
+          toast.error("Popup blocked. Please allow popups for this site in your browser address bar.", { id: "social-redirect" });
+        }
+      } else if (error.code === "auth/popup-closed-by-user") {
+        toast.error("Sign-in window closed before completing.");
+      } else if (error.code === "auth/unauthorized-domain") {
+        toast.error("Domain is not authorized in Firebase Console.");
+      } else {
+        toast.error(error.response?.data?.message || error.message || `${providerType} Authentication Failed`);
+      }
     } finally {
       setLoading(false);
     }
@@ -160,6 +208,7 @@ function Login() {
               <input
                 name="email"
                 type="email"
+                autoComplete="email"
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="name@domain.com"
@@ -186,6 +235,7 @@ function Login() {
               <input
                 name="password"
                 type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
                 value={formData.password}
                 onChange={handleChange}
                 placeholder="••••••••"
