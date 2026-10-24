@@ -28,3 +28,8 @@ export const socialLoginAPI = async (idToken) => {
   const response = await api.post("/auth/social-login", { idToken });
   return response.data;
 };
+
+export const googleLoginAPI = async (data) => {
+  const response = await api.post("/auth/google-login", data);
+  return response.data;
+};

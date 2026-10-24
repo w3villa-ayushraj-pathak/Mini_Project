@@ -1,5 +1,5 @@
 const express=require('express')
-const {signup,verifyEmail,resendVerificationEmail,login,logout,getMe,socialLogin}=require('../controllers/auth.controller')
+const {signup,verifyEmail,resendVerificationEmail,login,logout,getMe,socialLogin,googleLogin}=require('../controllers/auth.controller')
 const protect=require('../middlewares/auth.middleware')
 
 const router=express.Router()
@@ -13,7 +13,7 @@ router.post("/login", login);
 router.get("/me", protect, getMe);
 router.post("/logout", logout);
 router.post("/social-login", socialLogin);
-
+router.post("/google-login", googleLogin);
 
 module.exports=router
 

@@ -16,8 +16,9 @@ import {
   FacebookAuthProvider
 } from "firebase/auth";
 
+import { useGoogleLogin } from "@react-oauth/google";
 import { loginSuccess } from "../../redux/slices/authSlice";
-import { loginUser, getProfile, socialLoginAPI } from "../../services/auth.service"; 
+import { loginUser, getProfile, socialLoginAPI, googleLoginAPI } from "../../services/auth.service"; 
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -174,6 +175,33 @@ function Login() {
     }
   };
 
+  const handleGoogleLoginSuccess = async (tokenResponse) => {
+    try {
+      setLoading(true);
+      const backendResponse = await googleLoginAPI({
+        accessToken: tokenResponse.access_token,
+      });
+      await handleAuthFinalization(
+        backendResponse.data?.token,
+        backendResponse.message,
+        backendResponse.data?.user
+      );
+    } catch (error) {
+      console.error("Google Auth error:", error);
+      toast.error(error.response?.data?.message || "Google Authentication Failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loginWithGoogle = useGoogleLogin({
+    onSuccess: handleGoogleLoginSuccess,
+    onError: (error) => {
+      console.error("Google login failed:", error);
+      toast.error("Google sign-in was cancelled or failed");
+    },
+  });
+
   return (
     <div className="flex justify-center items-center min-h-screen w-full bg-[#050505] p-4 font-sans select-none relative overflow-hidden text-zinc-100">
       <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-emerald-500/5 blur-[120px] rounded-full pointer-events-none" />
@@ -200,7 +228,7 @@ function Login() {
           <button
             type="button"
             disabled={loading}
-            onClick={(e) => handleSocialAuth("google",e)}
+            onClick={() => loginWithGoogle()}
             className="flex items-center justify-center gap-x-2 bg-zinc-900/50 hover:bg-zinc-900 border border-zinc-800 disabled:opacity-50 text-zinc-200 text-sm font-semibold py-3 px-4 rounded-xl transition-all cursor-pointer active:scale-[0.98]"
           >
             <FaGoogle className="text-red-400 text-base" />

@@ -6,7 +6,13 @@ const catchAsync =require ("../utils/catchAsync.util.js");
 const generateVerificationToken =require ("../utils/generateVerificationToken.util.js");
 const sendVerificationEmail=require('../services/email.service.js')
 const generateToken=require('../utils/generateToken.util.js');
-const admin=require('../config/firebaseAdmin.js')
+const admin=require('../config/firebaseAdmin.js');
+const { OAuth2Client } = require("google-auth-library");
+const axios = require("axios");
+
+const googleClient = new OAuth2Client(
+  process.env.GOOGLE_CLIENT_ID || "106056511607-3ur9q2f2j140fcihrt6hdalr4dp4is62.apps.googleusercontent.com"
+);
 
 const createAndSaveVerificationToken = async (userId) => {
   await VerificationToken.deleteMany({ userId });
@@ -307,4 +313,103 @@ const socialLogin = catchAsync(async (req, res, next) => {
 });
 
 
-module.exports={signup,verifyEmail,resendVerificationEmail,login,logout,getMe, socialLogin}
+const googleLogin = catchAsync(async (req, res, next) => {
+  const { credential, idToken, accessToken } = req.body;
+
+  let email, name, picture, uid;
+
+  if (credential || idToken) {
+    const token = credential || idToken;
+    const ticket = await googleClient.verifyIdToken({
+      idToken: token,
+      audience: [
+        process.env.GOOGLE_CLIENT_ID,
+        "106056511607-3ur9q2f2j140fcihrt6hdalr4dp4is62.apps.googleusercontent.com"
+      ]
+    });
+    const payload = ticket.getPayload();
+    email = payload.email;
+    name = payload.name;
+    picture = payload.picture;
+    uid = payload.sub;
+  } else if (accessToken) {
+    const googleRes = await axios.get("https://www.googleapis.com/oauth2/v3/userinfo", {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    email = googleRes.data.email;
+    name = googleRes.data.name;
+    picture = googleRes.data.picture;
+    uid = googleRes.data.sub;
+  } else {
+    return next(new AppError("Google token is required", 400));
+  }
+
+  if (!email) {
+    return next(new AppError("Email authorization is required from Google.", 400));
+  }
+
+  const normalizedEmail = email.toLowerCase().trim();
+  let user = await User.findOne({ email: normalizedEmail });
+
+  if (!user) {
+    const authProviders = {
+      local: { enabled: false },
+      google: { id: uid, email: normalizedEmail },
+      facebook: { id: null, email: null }
+    };
+
+    user = await User.create({
+      name: name || normalizedEmail.split("@")[0],
+      email: normalizedEmail,
+      isEmailVerified: true,
+      authProviders,
+      profileImage: {
+        url: picture || "",
+        publicId: ""
+      }
+    });
+  } else {
+    let structureUpdated = false;
+
+    if (!user.authProviders) {
+      user.authProviders = {};
+    }
+
+    if (!user.authProviders.google?.id) {
+      user.authProviders.google = { id: uid, email: normalizedEmail };
+      structureUpdated = true;
+    }
+
+    if (!user.isEmailVerified) {
+      user.isEmailVerified = true;
+      structureUpdated = true;
+    }
+
+    if (structureUpdated) {
+      await user.save();
+    }
+  }
+
+  const token = generateToken({
+    userId: user._id,
+    role: user.role,
+  });
+
+  return res.status(200).json({
+    success: true,
+    message: "Google login successful",
+    data: {
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isEmailVerified: user.isEmailVerified,
+        currentPlan: user.currentPlan,
+      },
+    },
+  });
+});
+
+module.exports={signup,verifyEmail,resendVerificationEmail,login,logout,getMe, socialLogin, googleLogin}
