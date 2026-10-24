@@ -46,23 +46,36 @@ function Login() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleAuthFinalization = async (token, message) => {
+  const handleAuthFinalization = async (token, message, initialUser = null) => {
     localStorage.setItem("token", token);
-    const profile = await getProfile();
+
+    let resolvedUser = initialUser;
+    try {
+      const profile = await getProfile();
+      if (profile?.data?.user) {
+        resolvedUser = profile.data.user;
+      }
+    } catch (err) {
+      console.warn("Could not fetch extra profile, fallback to login user data:", err);
+    }
+
+    if (!resolvedUser) {
+      throw new Error("Unable to retrieve user details.");
+    }
 
     dispatch(
       loginSuccess({
         token,
-        user: profile.data.user,
+        user: resolvedUser,
       })
     );
 
     toast.success(message);
     
-    if (profile.data.user.role === "admin") {
-      navigate("/admin/dashboard");
+    if (resolvedUser.role === "admin") {
+      navigate("/admin/dashboard", { replace: true });
     } else {
-      navigate("/dashboard");
+      navigate("/dashboard", { replace: true });
     }
   };
 
@@ -76,7 +89,11 @@ function Login() {
           setLoading(true);
           const idToken = await result.user.getIdToken();
           const backendResponse = await socialLoginAPI(idToken);
-          await handleAuthFinalization(backendResponse.data.token, backendResponse.message);
+          await handleAuthFinalization(
+            backendResponse.data?.token,
+            backendResponse.message,
+            backendResponse.data?.user
+          );
         }
       } catch (error) {
         console.error("Redirect sign-in error:", error);
@@ -98,7 +115,11 @@ function Login() {
     try {
       setLoading(true);
       const loginResponse = await loginUser(formData);
-      await handleAuthFinalization(loginResponse.data.token, loginResponse.message);
+      await handleAuthFinalization(
+        loginResponse.data?.token,
+        loginResponse.message,
+        loginResponse.data?.user
+      );
     } catch (error) {
       toast.error(error.response?.data?.message || "Login Failed");
     } finally {
@@ -125,7 +146,11 @@ function Login() {
       const result = await signInWithPopup(auth, provider);
       const idToken = await result.user.getIdToken();
       const backendResponse = await socialLoginAPI(idToken);
-      await handleAuthFinalization(backendResponse.data.token, backendResponse.message);
+      await handleAuthFinalization(
+        backendResponse.data?.token,
+        backendResponse.message,
+        backendResponse.data?.user
+      );
     } catch (error) {
       console.error(`${providerType} auth error:`, error);
       if (error.code === "auth/popup-blocked") {
